@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Certificate Name Generator</title>
+
+    <!-- jsPDF for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+    </script>
+
+    <style>
+        /* ─── Reset & Base ─── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            background: #f4f6fb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 2rem 1.5rem;
+            color: #1e293b;
+        }
+
+        .app {
+            max-width: 1440px;
+            width: 100%;
+        }
+
+        /* ─── Header ─── */
+        .app-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .app-header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .app-header h1 span {
+            background: linear-gradient(135deg, #1e3a5f, #2d5a87);
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 0.2rem 1rem;
+            border-radius: 40px;
+            letter-spacing: 0.3px;
+        }
+
+        .app-header p {
+            color: #64748b;
+            margin-top: 0.3rem;
+            font-size: 1rem;
+        }
+
+        /* ─── Grid Layout ─── */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ─── Controls Panel ─── */
+        .controls-panel {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 1.75rem 1.5rem 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(226, 232, 240, 0.6);
+            position: sticky;
+            top: 2rem;
+        }
+
+        @media (max-width: 1024px) {
+            .controls-panel {
+                position: static;
+            }
+        }
+
+        .controls-panel h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .controls-panel h2 small {
+            font-weight: 400;
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-left: auto;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #334155;
+            margin-bottom: 0.4rem;
+        }
+
+        .control-group .hint {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 0.2rem;
+        }
+
+        /* ─── Upload Area ─── */
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            background: #fafcff;
+        }
+
+        .upload-zone:hover {
+            border-color: #3b82f6;
+            background: #f0f7ff;
+        }
+
+        .upload-zone.dragover {
+            border-color: #2563eb;
+            background: #e8f0fe;
+        }
+
+        .upload-zone .icon {
+            font-size: 2.8rem;
+            line-height: 1;
+            margin-bottom: 0.3rem;
+        }
+
+        .upload-zone .title {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .upload-zone .sub {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 0.2rem;
+        }
+
+        .upload-zone .formats {
+            font-size: 0.7rem;
+            color: #94a3b8;
+            margin-top: 0.5rem;
+            background: #f1f5f9;
+            display: inline-block;
+            padding: 0.15rem 0.9rem;
+            border-radius: 20px;
+        }
+
+        .upload-zone input[type="file"] {
+            display: none;
+        }
+
+        /* ─── File info ─── */
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #f1f5f9;
+            border-radius: 12px;
+            padding: 0.6rem 1rem;
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .file-info .name {
+            font-weight: 500;
+            color: #0f172a;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-info .remove {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1.2rem;
+            line-height: 1;
+            padding: 0 0.2rem;
+            transition: color 0.2s;
+        }
+
+        .file-info .remove:hover {
+            color: #ef4444;
+        }
+
+        /* ─── Inputs ─── */
+        .input-field {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: #fafcff;
+            color: #0f172a;
+            font-family: inherit;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        }
+
+        .input-field::placeholder {
+            color: #94a3b8;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        @media (max-width: 480px) {
+            .input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ─── Color picker ─── */
+        .color-picker-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .color-picker-wrap input[type="color"] {
+            width: 44px;
+            height: 44px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 2px;
+            cursor: pointer;
+            background: #fff;
+        }
+
+        .color-picker-wrap input[type="color"]::-webkit-color-swatch-wrapper {
+            padding: 0;
+        }
+
+        .color-picker-wrap input[type="color"]::-webkit-color-swatch {
+            border: none;
+            border-radius: 8px;
+        }
+
+        .color-picker-wrap .hex-label {
+            font-size: 0.85rem;
+            color: #475569;
+            font-weight: 500;
+        }
+
+        /* ─── Sliders ─── */
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .slider-group input[type="range"] {
+            flex: 1;
+            height: 4px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #e2e8f0;
+            border-radius: 4px;
+            outline: none;
+            transition: background 0.2s;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+            transition: transform 0.15s;
+        }
+
+        .slider-group input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .slider-group input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+        }
+
+        .slider-value {
+            min-width: 44px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #0f172a;
+            background: #f1f5f9;
+            padding: 0.15rem 0.4rem;
+            border-radius: 6px;
+        }
+
+        /* ─── Buttons ─── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.4rem;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+            text-decoration: none;
+            font-family: inherit;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: #1e3a5f;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(30, 58, 95, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: #152d4a;
+            box-shadow: 0 6px 18px rgba(30, 58, 95, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-success {
+            background: #0b5e42;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(11, 94, 66, 0.25);
+        }
+
+        .btn-success:hover {
+            background: #094a34;
+        }
+
+        .btn-success:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: #475569;
+            border: 1.5px solid #e2e8f0;
+        }
+
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .btn-danger-outline {
+            background: transparent;
+            color: #b91c1c;
+            border: 1.5px solid #fecaca;
+        }
+
+        .btn-danger-outline:hover {
+            background: #fef2f2;
+            border-color: #fca5a5;
+        }
+
+        .btn-warning {
+            background: #d97706;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+        }
+
+        .btn-warning:hover {
+            background: #b45309;
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-row .btn {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .action-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+            margin-top: 0.75rem;
+        }
+
+        @media (max-width: 480px) {
+            .action-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ─── Advanced toggle ─── */
+        .advanced-toggle {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 0.3rem 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: color 0.2s;
+            font-family: inherit;
+        }
+
+        .advanced-toggle:hover {
+            color: #0f172a;
+        }
+
+        .advanced-toggle .arrow {
+            display: inline-block;
+            transition: transform 0.25s;
+        }
+
+        .advanced-toggle .arrow.open {
+            transform: rotate(90deg);
+        }
+
+        .advanced-section {
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.35s ease, opacity 0.3s ease, margin 0.3s ease;
+            margin-top: 0;
+        }
+
+        .advanced-section.open {
+            max-height: 600px;
+            opacity: 1;
+            margin-top: 0.5rem;
+        }
+
+        .advanced-section .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .reset-pos-btn {
+            background: none;
+            border: none;
+            color: #3b82f6;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 0.2rem 0;
+            font-weight: 500;
+            font-family: inherit;
+            text-decoration: underline dotted;
+        }
+
+        .reset-pos-btn:hover {
+            color: #1d4ed8;
+        }
+
+        /* ─── Saved Settings ─── */
+        .saved-section {
+            border-top: 1.5px solid #eef2f6;
+            padding-top: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .saved-section .saved-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .saved-section .saved-row .input-field {
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .saved-section .saved-row .btn {
+            flex: 0 0 auto;
+            padding: 0.6rem 1rem;
+            font-size: 0.8rem;
+        }
+
+        .saved-section .saved-list {
+            margin-top: 0.75rem;
+        }
+
+        .saved-section .saved-list select {
+            width: 100%;
+            padding: 0.6rem 0.8rem;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fafcff;
+            font-size: 0.9rem;
+            color: #0f172a;
+            appearance: auto;
+        }
+
+        .saved-section .saved-list select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        }
+
+        .saved-section .saved-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .saved-section .saved-actions .btn {
+            flex: 1;
+            padding: 0.5rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        /* ─── Preview Panel ─── */
+        .preview-panel {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 1.75rem 1.5rem 2rem;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+
+        .preview-panel .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .preview-panel .preview-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .preview-panel .preview-header .badge {
+            font-size: 0.7rem;
+            background: #e8f0fe;
+            color: #1e3a5f;
+            padding: 0.2rem 0.8rem;
+            border-radius: 40px;
+            font-weight: 500;
+        }
+
+        .preview-container {
+            position: relative;
+            background: #f8fafc;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid #eef2f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+        }
+
+        .preview-container canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 75vh;
+            width: auto;
+            height: auto;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .preview-placeholder {
+            padding: 4rem 2rem;
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .preview-placeholder .big-icon {
+            font-size: 4rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.5;
+        }
+
+        .preview-placeholder p {
+            font-size: 0.95rem;
+            max-width: 320px;
+            margin: 0 auto;
+        }
+
+        /* ─── Status / Toast ─── */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #0f172a;
+            color: #fff;
+            padding: 0.8rem 1.8rem;
+            border-radius: 16px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            transition: opacity 0.35s, transform 0.35s;
+            pointer-events: none;
+            z-index: 999;
+            max-width: 90%;
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.error {
+            background: #991b1b;
+        }
+
+        .toast.success {
+            background: #0b5e42;
+        }
+
+        /* ─── Responsive tweaks ─── */
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem 0.75rem;
+            }
+
+            .app-header h1 {
+                font-size: 1.6rem;
+            }
+
+            .controls-panel,
+            .preview-panel {
+                padding: 1.25rem 1rem;
+            }
+
+            .upload-zone {
+                padding: 1.5rem 1rem;
+            }
+
+            .btn-row .btn {
+                min-width: 70px;
+                font-size: 0.8rem;
+                padding: 0.6rem 1rem;
+            }
+
+            .action-row {
+                grid-template-columns: 1fr;
+            }
+
+            .preview-container {
+                min-height: 240px;
+            }
+
+            .slider-group input[type="range"] {
+                height: 3px;
+            }
+
+            .saved-section .saved-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .saved-section .saved-actions {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* ─── Scrollbar ─── */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* ─── Utilities ─── */
+        .mt-1 {
+            margin-top: 0.5rem;
+        }
+        .mt-2 {
+            margin-top: 1rem;
+        }
+        .mb-1 {
+            margin-bottom: 0.5rem;
+        }
+        .flex {
+            display: flex;
+        }
+        .flex-center {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .gap-1 {
+            gap: 0.5rem;
+        }
+        .text-muted {
+            color: #94a3b8;
+            font-size: 0.8rem;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app" id="app">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>
+                🎓 Certificate Name Generator
+                <span>v2.0</span>
+            </h1>
+            <p>Upload a certificate, enter a name, and download a polished result.</p>
+        </header>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+
+            <!-- ─── Controls ─── -->
+            <aside class="controls-panel" id="controlsPanel">
+                <h2>
+                    ⚙️ Controls
+                    <small>all client‑side</small>
+                </h2>
+
+                <!-- Upload -->
+                <div class="control-group">
+                    <label>Certificate Template</label>
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="icon">🖼️</div>
+                        <div class="title">Drop certificate here</div>
+                        <div class="sub">or click to browse</div>
+                        <span class="formats">PNG · JPG · JPEG · WebP</span>
+                        <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" />
+                    </div>
+                    <div id="fileInfo" class="file-info hidden">
+                        <span>📄</span>
+                        <span class="name" id="fileName">certificate.png</span>
+                        <span class="text-muted" id="fileSize"></span>
+                        <button class="remove" id="removeFile" title="Remove certificate">✕</button>
+                    </div>
+                </div>
+
+                <!-- Name -->
+                <div class="control-group">
+                    <label for="nameInput">Full Name</label>
+                    <input class="input-field" id="nameInput" type="text" placeholder="e.g. Prajwal Rawoot" autocomplete="off" />
+                    <div class="hint">The name will be centered on the certificate.</div>
+                </div>
+
+                <!-- Font & Color -->
+                <div class="control-group">
+                    <div class="input-row">
+                        <div>
+                            <label for="fontSelect">Font</label>
+                            <select class="input-field" id="fontSelect">
+                                <option value="Times New Roman, serif">Times New Roman</option>
+                                <option value="Georgia, serif">Georgia</option>
+                                <option value="'Libre Baskerville', serif">Libre Baskerville</option>
+                                <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+                                <option value="'Playfair Display', serif">Playfair Display</option>
+                                <option value="serif">Default Serif</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Color</label>
+                            <div class="color-picker-wrap">
+                                <input type="color" id="colorPicker" value="#1a2a6c" />
+                                <span class="hex-label" id="colorHex">#1a2a6c</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Toggle -->
+                <button class="advanced-toggle" id="advancedToggle" type="button">
+                    <span class="arrow" id="arrowIcon">▶</span> Advanced Positioning
+                </button>
+
+                <div class="advanced-section" id="advancedSection">
+                    <div class="control-group">
+                        <div class="input-row">
+                            <div>
+                                <label for="xSlider">X Position <span class="text-muted">%</span></label>
+                                <div class="slider-group">
+                                    <input type="range" id="xSlider" min="10" max="90" step="0.1" value="50" />
+                                    <span class="slider-value" id="xVal">50.0</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="ySlider">Y Position <span class="text-muted">%</span></label>
+                                <div class="slider-group">
+                                    <input type="range" id="ySlider" min="10" max="90" step="0.1" value="57" />
+                                    <span class="slider-value" id="yVal">57.0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="fontSizeSlider">Font Size <span class="text-muted">px</span></label>
+                        <div class="slider-group">
+                            <input type="range" id="fontSizeSlider" min="12" max="120" step="1" value="44" />
+                            <span class="slider-value" id="fontSizeVal">44</span>
+                        </div>
+                        <div class="flex" style="justify-content:space-between;margin-top:0.3rem;">
+                            <span class="text-muted">Auto‑fit enabled</span>
+                            <button class="reset-pos-btn" id="resetPositionBtn" type="button">↺ Reset Position</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─── Saved Settings ─── -->
+                <div class="saved-section">
+                    <label style="font-weight:600;font-size:0.9rem;display:block;margin-bottom:0.5rem;">💾 Saved Settings</label>
+                    <div class="saved-row">
+                        <input class="input-field" id="settingNameInput" type="text" placeholder="Setting name..." value="My Certificate" />
+                        <button class="btn btn-warning" id="saveSettingBtn">Save</button>
+                    </div>
+                    <div class="saved-list">
+                        <select id="savedSettingsSelect">
+                            <option value="">— No saved settings —</option>
+                        </select>
+                    </div>
+                    <div class="saved-actions">
+                        <button class="btn btn-primary" id="loadSettingBtn" disabled>Load</button>
+                        <button class="btn btn-danger-outline" id="deleteSettingBtn" disabled>Delete</button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="control-group" style="margin-bottom:0;margin-top:1rem;border-top:1px solid #eef2f6;padding-top:1rem;">
+                    <div class="action-row">
+                        <button class="btn btn-primary" id="downloadPngBtn" disabled>
+                            ⬇️ PNG
+                        </button>
+                        <button class="btn btn-success" id="downloadPdfBtn" disabled>
+                            📄 PDF
+                        </button>
+                    </div>
+                    <div class="btn-row mt-1">
+                        <button class="btn btn-secondary" id="resetAllBtn" type="button">↺ Reset All</button>
+                        <button class="btn btn-danger-outline" id="clearNameBtn" type="button">✕ Clear Name</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- ─── Preview ─── -->
+            <section class="preview-panel">
+                <div class="preview-header">
+                    <h2>👁️ Live Preview</h2>
+                    <span class="badge" id="resolutionBadge">—</span>
+                </div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-placeholder" id="placeholder">
+                        <div class="big-icon">🖼️</div>
+                        <p>Upload a certificate image to get started.<br />Your name will appear here.</p>
+                    </div>
+                    <canvas id="previewCanvas" style="display:none;"></canvas>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <!-- ─── Toast ─── -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ──────────────────────────────────────────────────────────────
+        //  Certificate Name Generator — Full Implementation
+        // ──────────────────────────────────────────────────────────────
+
+        (function() {
+            'use strict';
+
+            // ─── DOM refs ───
+            const fileInput = document.getElementById('fileInput');
+            const uploadZone = document.getElementById('uploadZone');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const removeFileBtn = document.getElementById('removeFile');
+
+            const nameInput = document.getElementById('nameInput');
+            const fontSelect = document.getElementById('fontSelect');
+            const colorPicker = document.getElementById('colorPicker');
+            const colorHex = document.getElementById('colorHex');
+
+            const xSlider = document.getElementById('xSlider');
+            const ySlider = document.getElementById('ySlider');
+            const fontSizeSlider = document.getElementById('fontSizeSlider');
+            const xVal = document.getElementById('xVal');
+            const yVal = document.getElementById('yVal');
+            const fontSizeVal = document.getElementById('fontSizeVal');
+
+            const advancedToggle = document.getElementById('advancedToggle');
+            const advancedSection = document.getElementById('advancedSection');
+            const arrowIcon = document.getElementById('arrowIcon');
+            const resetPositionBtn = document.getElementById('resetPositionBtn');
+
+            const downloadPngBtn = document.getElementById('downloadPngBtn');
+            const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+            const resetAllBtn = document.getElementById('resetAllBtn');
+            const clearNameBtn = document.getElementById('clearNameBtn');
+
+            const previewCanvas = document.getElementById('previewCanvas');
+            const previewContainer = document.getElementById('previewContainer');
+            const placeholder = document.getElementById('placeholder');
+            const resolutionBadge = document.getElementById('resolutionBadge');
+
+            const toast = document.getElementById('toast');
+
+            // Saved settings
+            const settingNameInput = document.getElementById('settingNameInput');
+            const saveSettingBtn = document.getElementById('saveSettingBtn');
+            const savedSettingsSelect = document.getElementById('savedSettingsSelect');
+            const loadSettingBtn = document.getElementById('loadSettingBtn');
+            const deleteSettingBtn = document.getElementById('deleteSettingBtn');
+
+            // ─── State ───
+            const state = {
+                image: null, // original Image object
+                imageData: null, // { width, height, dataURL }
+                name: '',
+                font: 'Times New Roman, serif',
+                color: '#1a2a6c',
+                x: 50, // percent
+                y: 57, // percent
+                fontSize: 44, // base px (will be auto-fitted)
+                isDirty: false,
+                originalWidth: 0,
+                originalHeight: 0,
+            };
+
+            // Default position for the provided certificate
+            const DEFAULT_X = 50;
+            const DEFAULT_Y = 57;
+            const DEFAULT_FONT_SIZE = 44;
+
+            // ─── Helpers ───
+            function showToast(message, type = 'info', duration = 3200) {
+                toast.textContent = message;
+                toast.className = 'toast';
+                if (type === 'error') toast.classList.add('error');
+                if (type === 'success') toast.classList.add('success');
+                toast.classList.add('visible');
+                clearTimeout(toast._hideTimer);
+                toast._hideTimer = setTimeout(() => {
+                    toast.classList.remove('visible');
+                }, duration);
+            }
+
+            function sanitizeFilename(name) {
+                return name
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\- ]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-')
+                    .replace(/^-|-$/g, '') || 'certificate';
+            }
+
+            function getFileExtension(filename) {
+                const i = filename.lastIndexOf('.');
+                return i > 0 ? filename.slice(i + 1).toLowerCase() : '';
+            }
+
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            function clamp(v, min, max) { return Math.min(Math.max(v, min), max); }
+
+            // ─── Image loading ───
+            function loadImageFromFile(file) {
+                return new Promise((resolve, reject) => {
+                    if (!file || !file.type.startsWith('image/')) {
+                        reject(new Error('Unsupported file type.'));
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            resolve({ image: img, dataURL: e.target.result });
+                        };
+                        img.onerror = () => {
+                            reject(new Error('Failed to decode image.'));
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = () => {
+                        reject(new Error('Failed to read file.'));
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function loadImageFromDataURL(dataURL) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        resolve({ image: img, dataURL: dataURL });
+                    };
+                    img.onerror = () => {
+                        reject(new Error('Failed to load image from saved data.'));
+                    };
+                    img.src = dataURL;
+                });
+            }
+
+            // ─── Render ───
+            function render() {
+                if (!state.image) {
+                    previewCanvas.style.display = 'none';
+                    placeholder.style.display = 'block';
+                    downloadPngBtn.disabled = true;
+                    downloadPdfBtn.disabled = true;
+                    resolutionBadge.textContent = '—';
+                    return;
+                }
+
+                const img = state.image;
+                const w = img.naturalWidth || img.width;
+                const h = img.naturalHeight || img.height;
+                state.originalWidth = w;
+                state.originalHeight = h;
+
+                // Set canvas to original resolution
+                previewCanvas.width = w;
+                previewCanvas.height = h;
+                const ctx = previewCanvas.getContext('2d', {
+                    alpha: false,
+                    willReadFrequently: false,
+                });
+
+                // Draw certificate
+                ctx.drawImage(img, 0, 0, w, h);
+
+                // Draw name if present
+                const name = state.name.trim();
+                if (name) {
+                    const fontFamily = state.font;
+                    const color = state.color;
+
+                    // Calculate available width (90% of certificate width, centered)
+                    const maxWidth = w * 0.82;
+                    const centerX = w * (state.x / 100);
+                    const centerY = h * (state.y / 100);
+
+                    // Auto-fit font size
+                    let fontSize = state.fontSize;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    // Measure and shrink if needed
+                    let testSize = fontSize;
+                    ctx.font = `bold ${testSize}px ${fontFamily}`;
+                    let metrics = ctx.measureText(name);
+                    let textWidth = metrics.width;
+
+                    // If too wide, reduce until it fits
+                    if (textWidth > maxWidth) {
+                        let low = 8;
+                        let high = fontSize;
+                        let best = fontSize;
+                        for (let iter = 0; iter < 30; iter++) {
+                            const mid = (low + high) / 2;
+                            ctx.font = `bold ${mid}px ${fontFamily}`;
+                            const m = ctx.measureText(name);
+                            if (m.width <= maxWidth) {
+                                best = mid;
+                                low = mid;
+                            } else {
+                                high = mid;
+                            }
+                            if (high - low < 0.5) break;
+                        }
+                        fontSize = Math.floor(best);
+                    } else {
+                        // Also check if we can go bigger (up to 1.3x) for short names
+                        let canGrow = fontSize;
+                        for (let test = fontSize; test < fontSize * 1.3; test += 0.5) {
+                            ctx.font = `bold ${test}px ${fontFamily}`;
+                            const m = ctx.measureText(name);
+                            if (m.width <= maxWidth) {
+                                canGrow = test;
+                            } else {
+                                break;
+                            }
+                        }
+                        fontSize = Math.floor(canGrow);
+                    }
+
+                    // Clamp to reasonable range
+                    fontSize = clamp(fontSize, 10, 140);
+
+                    // Draw shadow for readability (subtle)
+                    ctx.shadowColor = 'rgba(255,255,255,0.4)';
+                    ctx.shadowBlur = 6;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
+
+                    ctx.font = `bold ${fontSize}px ${fontFamily}`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = color;
+                    ctx.shadowColor = 'rgba(255,255,255,0.5)';
+                    ctx.shadowBlur = 8;
+                    ctx.fillText(name, centerX, centerY);
+
+                    // Draw again without shadow for crispness
+                    ctx.shadowColor = 'transparent';
+                    ctx.shadowBlur = 0;
+                    ctx.fillText(name, centerX, centerY);
+                }
+
+                // Show canvas
+                previewCanvas.style.display = 'block';
+                placeholder.style.display = 'none';
+                downloadPngBtn.disabled = false;
+                downloadPdfBtn.disabled = false;
+
+                resolutionBadge.textContent = `${w} × ${h}`;
+
+                // Store the rendered data URL for PDF export
+                state._renderedDataURL = previewCanvas.toDataURL('image/png');
+            }
+
+            // ─── Update preview (throttled) ───
+            let renderTimer = null;
+
+            function scheduleRender() {
+                if (renderTimer) {
+                    cancelAnimationFrame(renderTimer);
+                }
+                renderTimer = requestAnimationFrame(() => {
+                    render();
+                    renderTimer = null;
+                });
+            }
+
+            // ─── Download PNG ───
+            function downloadPNG() {
+                if (!state.image) {
+                    showToast('Please upload a certificate first.', 'error');
+                    return;
+                }
+                const name = state.name.trim() || 'certificate';
+                const slug = sanitizeFilename(name);
+                const link = document.createElement('a');
+                link.download = `certificate-${slug}.png`;
+                link.href = previewCanvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                showToast(`✅ PNG downloaded: certificate-${slug}.png`, 'success');
+            }
+
+            // ─── Download PDF ───
+            function downloadPDF() {
+                if (!state.image) {
+                    showToast('Please upload a certificate first.', 'error');
+                    return;
+                }
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const w = state.originalWidth;
+                    const h = state.originalHeight;
+
+                    // Determine orientation
+                    const isLandscape = w >= h;
+                    const orientation = isLandscape ? 'l' : 'p';
+
+                    // PDF dimensions in mm (A4-ish, but scaled to fit)
+                    const pdfW = isLandscape ? 297 : 210;
+                    const pdfH = isLandscape ? 210 : 297;
+
+                    // Scale to fit within page while maintaining aspect
+                    const scaleX = pdfW / w;
+                    const scaleY = pdfH / h;
+                    const scale = Math.min(scaleX, scaleY) * 0.95;
+                    const finalW = w * scale;
+                    const finalH = h * scale;
+                    const offsetX = (pdfW - finalW) / 2;
+                    const offsetY = (pdfH - finalH) / 2;
+
+                    const pdf = new jsPDF({
+                        orientation: orientation,
+                        unit: 'mm',
+                        format: [pdfW, pdfH],
+                        compress: true,
+                    });
+
+                    // Use the rendered data URL
+                    const imgData = state._renderedDataURL || previewCanvas.toDataURL('image/png');
+                    pdf.addImage(imgData, 'PNG', offsetX, offsetY, finalW, finalH);
+
+                    const name = state.name.trim() || 'certificate';
+                    const slug = sanitizeFilename(name);
+                    pdf.save(`certificate-${slug}.pdf`);
+                    showToast(`✅ PDF downloaded: certificate-${slug}.pdf`, 'success');
+                } catch (err) {
+                    console.error(err);
+                    showToast('PDF generation failed. Please try again.', 'error');
+                }
+            }
+
+            // ─── Reset position to defaults ───
+            function resetPosition() {
+                state.x = DEFAULT_X;
+                state.y = DEFAULT_Y;
+                state.fontSize = DEFAULT_FONT_SIZE;
+                xSlider.value = DEFAULT_X;
+                ySlider.value = DEFAULT_Y;
+                fontSizeSlider.value = DEFAULT_FONT_SIZE;
+                xVal.textContent = DEFAULT_X.toFixed(1);
+                yVal.textContent = DEFAULT_Y.toFixed(1);
+                fontSizeVal.textContent = DEFAULT_FONT_SIZE;
+                scheduleRender();
+                showToast('Position reset to default.', 'info');
+            }
+
+            // ─── Reset all ───
+            function resetAll() {
+                // Clear name
+                nameInput.value = '';
+                state.name = '';
+                // Reset position
+                resetPosition();
+                // Reset font
+                fontSelect.value = 'Times New Roman, serif';
+                state.font = 'Times New Roman, serif';
+                // Reset color
+                colorPicker.value = '#1a2a6c';
+                state.color = '#1a2a6c';
+                colorHex.textContent = '#1a2a6c';
+                // Remove image
+                removeImage();
+                // Close advanced
+                advancedSection.classList.remove('open');
+                arrowIcon.classList.remove('open');
+                showToast('All settings reset.', 'info');
+            }
+
+            // ─── Remove image ───
+            function removeImage() {
+                state.image = null;
+                state.imageData = null;
+                state.originalWidth = 0;
+                state.originalHeight = 0;
+                state._renderedDataURL = null;
+                fileInput.value = '';
+                fileInfo.classList.add('hidden');
+                previewCanvas.style.display = 'none';
+                placeholder.style.display = 'block';
+                downloadPngBtn.disabled = true;
+                downloadPdfBtn.disabled = true;
+                resolutionBadge.textContent = '—';
+                scheduleRender();
+            }
+
+            // ─── Handle file upload ───
+            async function handleFile(file) {
+                if (!file) return;
+                const validTypes = ['image/png', 'image/jpeg', 'image/webp'];
+                const ext = getFileExtension(file.name);
+                if (!validTypes.includes(file.type) && !['png', 'jpg', 'jpeg', 'webp'].includes(ext)) {
+                    showToast('Unsupported file type. Please upload PNG, JPG, JPEG, or WebP.', 'error');
+                    return;
+                }
+
+                try {
+                    const result = await loadImageFromFile(file);
+                    state.image = result.image;
+                    state.imageData = {
+                        width: result.image.naturalWidth || result.image.width,
+                        height: result.image.naturalHeight || result.image.height,
+                        dataURL: result.dataURL,
+                    };
+                    // Show file info
+                    fileName.textContent = file.name;
+                    fileSize.textContent = formatFileSize(file.size);
+                    fileInfo.classList.remove('hidden');
+
+                    // Reset position to defaults for new certificate
+                    resetPosition();
+
+                    showToast(`✅ Loaded: ${file.name}`, 'success');
+                    scheduleRender();
+                } catch (err) {
+                    showToast(err.message || 'Failed to load image.', 'error');
+                }
+            }
+
+            // ─── Saved Settings ───
+
+            const STORAGE_KEY = 'certificateSettings';
+
+            function getSavedSettings() {
+                try {
+                    const data = localStorage.getItem(STORAGE_KEY);
+                    return data ? JSON.parse(data) : [];
+                } catch {
+                    return [];
+                }
+            }
+
+            function saveSettingsList(list) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+            }
+
+            function populateSettingsDropdown() {
+                const list = getSavedSettings();
+                const select = savedSettingsSelect;
+                select.innerHTML = '';
+                if (list.length === 0) {
+                    select.innerHTML = '<option value="">— No saved settings —</option>';
+                    loadSettingBtn.disabled = true;
+                    deleteSettingBtn.disabled = true;
+                    return;
+                }
+                list.forEach((item, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index;
+                    opt.textContent = item.name || `Setting ${index + 1}`;
+                    select.appendChild(opt);
+                });
+                loadSettingBtn.disabled = false;
+                deleteSettingBtn.disabled = false;
+                // Select first if available
+                if (list.length > 0) {
+                    select.selectedIndex = 0;
+                }
+            }
+
+            function saveCurrentSetting() {
+                if (!state.image) {
+                    showToast('Please upload a certificate first.', 'error');
+                    return;
+                }
+                const name = settingNameInput.value.trim() || 'Untitled Setting';
+                const list = getSavedSettings();
+                // Check for duplicate name? we allow duplicates.
+                const entry = {
+                    name: name,
+                    imageDataURL: state.imageData.dataURL,
+                    x: state.x,
+                    y: state.y,
+                    fontSize: state.fontSize,
+                    font: state.font,
+                    color: state.color,
+                    originalWidth: state.originalWidth,
+                    originalHeight: state.originalHeight,
+                    id: Date.now() + Math.random(),
+                };
+                list.push(entry);
+                saveSettingsList(list);
+                populateSettingsDropdown();
+                showToast(`✅ Setting "${name}" saved.`, 'success');
+            }
+
+            async function loadSelectedSetting() {
+                const select = savedSettingsSelect;
+                const idx = parseInt(select.value, 10);
+                if (isNaN(idx) || idx < 0) {
+                    showToast('Please select a saved setting.', 'error');
+                    return;
+                }
+                const list = getSavedSettings();
+                if (idx >= list.length) {
+                    showToast('Setting not found.', 'error');
+                    return;
+                }
+                const entry = list[idx];
+                try {
+                    // Load image from dataURL
+                    const result = await loadImageFromDataURL(entry.imageDataURL);
+                    state.image = result.image;
+                    state.imageData = {
+                        width: entry.originalWidth || result.image.naturalWidth,
+                        height: entry.originalHeight || result.image.naturalHeight,
+                        dataURL: entry.imageDataURL,
+                    };
+                    state.originalWidth = entry.originalWidth || result.image.naturalWidth;
+                    state.originalHeight = entry.originalHeight || result.image.naturalHeight;
+
+                    // Apply settings
+                    state.x = entry.x;
+                    state.y = entry.y;
+                    state.fontSize = entry.fontSize;
+                    state.font = entry.font || 'Times New Roman, serif';
+                    state.color = entry.color || '#1a2a6c';
+
+                    // Update UI
+                    xSlider.value = entry.x;
+                    ySlider.value = entry.y;
+                    fontSizeSlider.value = entry.fontSize;
+                    xVal.textContent = entry.x.toFixed(1);
+                    yVal.textContent = entry.y.toFixed(1);
+                    fontSizeVal.textContent = entry.fontSize;
+                    fontSelect.value = entry.font || 'Times New Roman, serif';
+                    colorPicker.value = entry.color || '#1a2a6c';
+                    colorHex.textContent = entry.color || '#1a2a6c';
+
+                    // Show file info (fake)
+                    fileName.textContent = `Saved: ${entry.name}`;
+                    fileSize.textContent = '';
+                    fileInfo.classList.remove('hidden');
+
+                    // Reset name field
+                    nameInput.value = '';
+                    state.name = '';
+
+                    showToast(`✅ Loaded setting: "${entry.name}"`, 'success');
+                    scheduleRender();
+                } catch (err) {
+                    showToast('Failed to load saved setting: ' + err.message, 'error');
+                }
+            }
+
+            function deleteSelectedSetting() {
+                const select = savedSettingsSelect;
+                const idx = parseInt(select.value, 10);
+                if (isNaN(idx) || idx < 0) {
+                    showToast('Please select a setting to delete.', 'error');
+                    return;
+                }
+                const list = getSavedSettings();
+                if (idx >= list.length) {
+                    showToast('Setting not found.', 'error');
+                    return;
+                }
+                const name = list[idx].name;
+                if (!confirm(`Delete setting "${name}"?`)) return;
+                list.splice(idx, 1);
+                saveSettingsList(list);
+                populateSettingsDropdown();
+                showToast(`🗑️ Deleted "${name}".`, 'info');
+            }
+
+            // ─── UI Event binding ───
+
+            // Upload: click
+            uploadZone.addEventListener('click', () => fileInput.click());
+
+            // Upload: change
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            // Upload: drag & drop
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+            uploadZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+            });
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files && files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+
+            // Remove file
+            removeFileBtn.addEventListener('click', removeImage);
+
+            // Name input
+            nameInput.addEventListener('input', () => {
+                state.name = nameInput.value;
+                scheduleRender();
+            });
+
+            // Font select
+            fontSelect.addEventListener('change', () => {
+                state.font = fontSelect.value;
+                scheduleRender();
+            });
+
+            // Color picker
+            colorPicker.addEventListener('input', () => {
+                state.color = colorPicker.value;
+                colorHex.textContent = colorPicker.value;
+                scheduleRender();
+            });
+
+            // Sliders
+            xSlider.addEventListener('input', () => {
+                const v = parseFloat(xSlider.value);
+                state.x = v;
+                xVal.textContent = v.toFixed(1);
+                scheduleRender();
+            });
+            ySlider.addEventListener('input', () => {
+                const v = parseFloat(ySlider.value);
+                state.y = v;
+                yVal.textContent = v.toFixed(1);
+                scheduleRender();
+            });
+            fontSizeSlider.addEventListener('input', () => {
+                const v = parseInt(fontSizeSlider.value, 10);
+                state.fontSize = v;
+                fontSizeVal.textContent = v;
+                scheduleRender();
+            });
+
+            // Advanced toggle
+            advancedToggle.addEventListener('click', () => {
+                const isOpen = advancedSection.classList.toggle('open');
+                arrowIcon.classList.toggle('open');
+                advancedToggle.querySelector('.arrow').classList.toggle('open');
+            });
+
+            // Reset position
+            resetPositionBtn.addEventListener('click', resetPosition);
+
+            // Download buttons
+            downloadPngBtn.addEventListener('click', downloadPNG);
+            downloadPdfBtn.addEventListener('click', downloadPDF);
+
+            // Reset all
+            resetAllBtn.addEventListener('click', resetAll);
+
+            // Clear name
+            clearNameBtn.addEventListener('click', () => {
+                nameInput.value = '';
+                state.name = '';
+                scheduleRender();
+                showToast('Name cleared.', 'info');
+            });
+
+            // Saved settings
+            saveSettingBtn.addEventListener('click', saveCurrentSetting);
+            loadSettingBtn.addEventListener('click', loadSelectedSetting);
+            deleteSettingBtn.addEventListener('click', deleteSelectedSetting);
+
+            // Keyboard shortcut: Enter to focus
+            nameInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    // Optionally do nothing special, just keep focus
+                }
+            });
+
+            // ─── Init ───
+            // Load fonts from Google
+            const link = document.createElement('link');
+            link.href = 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Cormorant+Garamond:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap';
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+
+            // Set initial state
+            state.font = fontSelect.value;
+            state.color = colorPicker.value;
+            state.x = DEFAULT_X;
+            state.y = DEFAULT_Y;
+            state.fontSize = DEFAULT_FONT_SIZE;
+            xSlider.value = DEFAULT_X;
+            ySlider.value = DEFAULT_Y;
+            fontSizeSlider.value = DEFAULT_FONT_SIZE;
+            xVal.textContent = DEFAULT_X.toFixed(1);
+            yVal.textContent = DEFAULT_Y.toFixed(1);
+            fontSizeVal.textContent = DEFAULT_FONT_SIZE;
+
+            // Populate saved settings dropdown
+            populateSettingsDropdown();
+
+            // Show initial placeholder
+            placeholder.style.display = 'block';
+            previewCanvas.style.display = 'none';
+
+            console.log('🎓 Certificate Name Generator ready.');
+            console.log('📐 Default position: X=50%, Y=57% (calibrated for the provided certificate)');
+
+            // Expose for debugging (optional)
+            window.__certGen = { state, render, resetPosition, removeImage, handleFile };
+
+        })();
+    </script>
+
+</body>
+</html>
