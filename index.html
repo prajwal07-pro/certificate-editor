@@ -9,6 +9,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
     </script>
 
+    <!-- Google Fonts – added Great Vibes -->
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Cormorant+Garamond:wght@400;600;700&family=Playfair+Display:wght@400;700&family=Great+Vibes&display=swap" rel="stylesheet">
+
     <style>
         /* ─── Reset & Base ─── */
         *,
@@ -848,6 +851,8 @@
                                 <option value="'Libre Baskerville', serif">Libre Baskerville</option>
                                 <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
                                 <option value="'Playfair Display', serif">Playfair Display</option>
+                                <!-- New Great Vibes font -->
+                                <option value="'Great Vibes', cursive">Great Vibes</option>
                                 <option value="serif">Default Serif</option>
                             </select>
                         </div>
@@ -1641,12 +1646,6 @@
             });
 
             // ─── Init ───
-            // Load fonts from Google
-            const link = document.createElement('link');
-            link.href = 'https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&family=Cormorant+Garamond:wght@400;600;700&family=Playfair+Display:wght@400;700&display=swap';
-            link.rel = 'stylesheet';
-            document.head.appendChild(link);
-
             // Set initial state
             state.font = fontSelect.value;
             state.color = colorPicker.value;
